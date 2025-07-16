@@ -1,0 +1,20 @@
+{
+  "name": "tinder-be",
+  "version": "1.0.0",
+  "description": "project tinder by NK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev-start": "nodemon src/app.js"
+  },
+  "keywords": [
+    "ndejs",
+    "javascript",
+    "mongodb"
+  ],
+  "author": "Nilesh Khot",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
