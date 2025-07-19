@@ -8,13 +8,14 @@
     "dev-start": "nodemon src/app.js"
   },
   "keywords": [
-    "ndejs",
+    "nodejs",
     "javascript",
     "mongodb"
   ],
   "author": "Nilesh Khot",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "mongoose": "^8.16.4"
   }
 }
