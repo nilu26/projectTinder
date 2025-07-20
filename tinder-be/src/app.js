@@ -2,6 +2,10 @@ const express = require("express");
 const connectDB = require("./config/database");
 const User = require("./models/user");
 const app = express();
+const { fieldsToBeUpdated, validateFields } = require("./utils/validations");
+const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
 // app.use("/user", (req, res, next) => {
 //     try{
@@ -36,6 +40,7 @@ const app = express();
 //     res.send("Hello from Dashboard....!!");
 // });
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signUp", async (req, res) => {
   const data = req.body;
@@ -50,16 +55,58 @@ app.post("/signUp", async (req, res) => {
   //   };
 
   try {
+    validateFields(data);
+    const encryptPassword = await bcrypt.hash(data.password, 10);
+    data.password = encryptPassword;
+    console.log("data after encryption: ", data);
     const user = new User(data);
-    const isUserExists = await User.findOne({ emailId: user.emailId });
-    if (isUserExists) {
-      throw new Error("EmailId already exists, use different emailId");
-    } else {
-      user.save();
-      res.send("User added successfully");
-    }
+    // const isUserExists = await User.findOne({ emailId: user.emailId });
+    // if (isUserExists) {
+    //   throw new Error("EmailId already exists, use different emailId");
+    // } else {
+    await user.save();
+    res.send("User added successfully");
+    // }
   } catch (err) {
     res.status(400).send(err.message || "Failed to add User.");
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
+      throw new Error("Invalid emailId or password");
+    }
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (isPasswordMatch) {
+      const jwtToken = await jwt.sign({ _id: user._id }, "Nilesh@123$Misty");
+      res.cookie("token", jwtToken);
+      res.send("User logged in successfully");
+    } else {
+      throw new Error("Invalid emailId or password");
+    }
+  } catch (err) {
+    res.status(400).send(err.message || "Failed to login User.");
+  }
+});
+
+app.get("/profile", async (req, res) => {
+  try {
+    const cookies = req.cookies;
+    const { token } = cookies;
+    if (!token) {
+      throw new Error("No token found, please login again");
+    }
+    const decodedToken = await jwt.verify(token, "Nilesh@123$Misty");
+    const user = await User.findById(decodedToken._id);
+    if (!user) {
+      throw new Error("User not found, please login again");
+    }
+    res.send(user);
+  } catch (err) {
+    res.status(400).send(err.message || "Failed to fetch User profile.");
   }
 });
 
@@ -88,29 +135,34 @@ app.get("/getUser", async (req, res) => {
   }
 });
 
-app.delete("/deleteUser", async (req, res) => {
-  const data = req.body.emailId;
+app.delete("/deleteUser/:userId", async (req, res) => {
+  // const data = req.body.emailId;
+  const userId = req.params?.userId;
   try {
-    const user = await User.deleteOne({ emailId: data });
-    if (!user) {
-      throw new Error();
-    } else {
-      res.send("User is deleted user successfully");
-    }
+    const user = await User.deleteOne({ _id: userId });
+    res.send("User is deleted successfully");
   } catch (err) {
-    res.status(404).send(`${data} not found to delete.`);
+    res.status(404).send("Failed to delete User");
   }
 });
 
-app.patch("/updateUser", async (req, res) => {
+app.patch("/updateUser/:userId", async (req, res) => {
   const data = req.body;
+  const userId = req.params?.userId;
   try {
+    if (!fieldsToBeUpdated(data)) {
+      throw new Error("Some fields are restricted to update!");
+    }
+
+    if (data?.skills.length > 10) {
+      throw new Error("Skills cannot bew more that 10!");
+    }
     const { emailId, ...updateFields } = data;
-    updateFields.updatedOn = new Date();
-    updateFields.updatedBy = "Nilesh Khot";
+    // updateFields.updatedBy = "Nilesh Khot";
     const resp = await User.updateOne(
-      { emailId: emailId },
-      { $set: updateFields }
+      { _id: userId },
+      { $set: updateFields },
+      { runValidators: true }
     );
     res.send("User updated successfully.");
   } catch (err) {
