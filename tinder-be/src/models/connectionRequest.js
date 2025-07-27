@@ -11,7 +11,7 @@ const ConnectionRequestSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["interested", "Ignored", "Accepted", "Rejected"],
+        values: ["interested", "ignored", "accepted", "rejected"],
         message: "{VALUE} does not exist",
       },
     },
@@ -21,7 +21,7 @@ const ConnectionRequestSchema = new mongoose.Schema(
 
 ConnectionRequestSchema.index({ fromUserId: 1, toUserId: 1 });
 
-ConnectionRequestSchema.pre("save", function next() {
+ConnectionRequestSchema.pre("save", function (next) {
   const connectionReq = this;
   if (connectionReq.fromUserId.equals(connectionReq.toUserId)) {
     throw new Error("Cannot send connection request to yourself!");
